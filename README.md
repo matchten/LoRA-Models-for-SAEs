@@ -1,4 +1,4 @@
-![Visual Representation of Low Rank Adapting Models for SAEs](https://drive.google.com/file/d/1SAYGqIAqLPciSG818WIokIRDKujVAvAE/view?usp=sharing)
+![Visual Representation of Low Rank Adapting Models for SAEs](plots/LoRA-SAE-skip-cropped.jpg)
 
 # LoRA-Models-for-SAEs
 This is the github repo for our paper "Low Rank Adapting Models for Sparse Autoencoder Features".
@@ -81,5 +81,5 @@ python eval/benchmarks/run_benchmarks.py --device 0 --model_type "peft" --model_
 ```
 
 ### Creating Plots
-Follow and run the appropriate cells in `plot.ipynb` to reproduce the plots in the paper.
+Follow and run the appropriate cells in `plot.ipynb` to reproduce the plots in the paper. Resulting plots will be saved in `plots/`.
 
