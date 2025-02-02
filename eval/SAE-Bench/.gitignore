@@ -1,0 +1,45 @@
+.venv/
+.DS_Store
+.vscode/
+.gitattributes
+
+*__pycache__/
+*/.pytest_cache/
+*/.mypy_cache/
+*/.tox/
+*/.vscode/
+*/.idea/
+*/.mypy_cache/
+*/.pytest_cache/
+*/.coverage
+*.pyc
+
+Pipfile
+Pipfile.lock
+poetry.lock
+
+*/images/
+*/results/
+!/sparse_probing/results/example_pythia-70m-deduped_layer_4_eval_results.json
+!/sparse_probing/results/example_gemma-2-2b_layer_19_eval_results.json
+!/sparse_probing/results/example_gemma-2-2b_layer_19_with_checkpoints_eval_results.json
+Pipfile*
+poetry.lock
+
+auth/*
+
+evals/ravel/data/
+evals/ravel/models/
+
+# unlearning: the forget dataset cannot be uploaded
+**bio-forget-corpus.jsonl
+
+
+**/images/
+**/results/
+**/artifacts/
+**/test_results/
+# **/eval_results/**
+# *eval_results*
+**/dev/
+openai_api_key.txt
