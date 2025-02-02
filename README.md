@@ -1,4 +1,4 @@
-![Visual Representation of Low Rank Adapting Models for SAEs](plots/LoRA-SAE-skip-cropped.jpg)
+![Visual Representation of Low Rank Adapting Models for SAEs](plots/LoRA-SAE_setup.jpg)
 
 # LoRA-Models-for-SAEs
 This is the github repo for our paper "Low Rank Adapting Models for Sparse Autoencoder Features".
