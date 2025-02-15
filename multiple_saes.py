@@ -37,10 +37,18 @@ args = Args()
 parser = argparse.ArgumentParser()
 parser.add_argument("--sae_jump", type=int, default=1, choices=[1, 2, 3, 4, 6, 8, 12, 16])
 parser.add_argument("--device", type=str, default="cuda:0")
+parser.add_argument("--dont_freeze_saes", action="store_true")
+parser.add_argument("--dont_use_lora", action="store_true")
 args_parsed = parser.parse_args()
 
 sae_jump = args_parsed.sae_jump
 device = args_parsed.device
+freeze_saes = not args_parsed.dont_freeze_saes
+use_lora = not args_parsed.dont_use_lora
+
+if freeze_saes and not use_lora:
+    raise ValueError("Cannot freeze SAEs and not use PEFT")
+
 args.device = device
 
 
@@ -127,28 +135,31 @@ if eval_base_model:
 
 
 # %%
-# Freeze SAEs
-for sae, config, none in saes:
-    for param in sae.parameters():
-        param.requires_grad = False
+
+if freeze_saes:
+    for sae, config, none in saes:
+        for param in sae.parameters():
+            param.requires_grad = False
 
 # %%
-# Add PEFT config
-from utils import get_target_modules
-target_modules = get_target_modules(MODEL, peft_layers=range(32), peft_type="both")
-peft_config = LoraConfig(
-    task_type=TaskType.CAUSAL_LM,
-    r=args.peft_rank,
-    lora_alpha=32,
-    lora_dropout=0.1,
-    target_modules=target_modules,
-    bias="none",
-)
+if use_lora:
+    # Add PEFT config
+    from utils import get_target_modules
+    target_modules = get_target_modules(MODEL, peft_layers=range(32), peft_type="both")
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=args.peft_rank,
+        lora_alpha=32,
+        lora_dropout=0.1,
+        target_modules=target_modules,
+        bias="none",
+    )
 
-# Convert to PEFT model
-peft_model = get_peft_model(model, peft_config)
-peft_model.print_trainable_parameters()
-
+    # Convert to PEFT model
+    peft_model = get_peft_model(model, peft_config)
+    peft_model.print_trainable_parameters()
+else:
+    peft_model = model
 # %%
 
 def remove_all_forward_hooks(model: torch.nn.Module) -> None:
@@ -193,11 +204,29 @@ def get_sae_hook(sae):
 # Add SAE hooks
 handles = []
 for index, layer in enumerate(sae_indices):
-    handles.append(peft_model.model.model.layers[layer + 1].register_forward_hook(
+    model_to_attach = peft_model
+    while hasattr(model_to_attach, "model"):
+        model_to_attach = model_to_attach.model
+    handles.append(model_to_attach.layers[layer + 1].register_forward_hook(
         get_sae_hook(saes[index][0])
     ))
 
 # %%
+
+class NoopOrDisableAdapter:
+    def __init__(self, model):
+        self.model = model
+    
+    def __enter__(self):
+        if use_lora:
+            return self.model.disable_adapter()
+        return None
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+
 @torch.no_grad()
 def evaluate_model(peft_model, val_dataset, device, disable_peft=False):
     """Evaluate model on validation set"""
@@ -214,7 +243,7 @@ def evaluate_model(peft_model, val_dataset, device, disable_peft=False):
         GlobalUseSae.use_sae = True
 
         if disable_peft:
-            with peft_model.disable_adapter():
+            with NoopOrDisableAdapter(peft_model):
                 outputs = peft_model(val_batch, labels=val_targets)
         else:
             outputs = peft_model(val_batch, labels=val_targets)
@@ -274,7 +303,7 @@ def train_model(
                 optimizer.zero_grad()
 
                 GlobalUseSae.current_batch = inputs.detach()
-                with peft_model.disable_adapter():
+                with NoopOrDisableAdapter(peft_model):
                     with torch.no_grad():
                         GlobalUseSae.use_sae = False
                         base_outputs = peft_model(inputs)
@@ -338,7 +367,7 @@ train_model(
     args=args,
     rank=args.peft_rank,
     project_name="llama_multiple_saes_2",
-    run_name=f"llama_{args.peft_rank}_{sae_indices}",
+    run_name=f"llama_{args.peft_rank}_{sae_indices}_{'lora' if use_lora else 'no-lora'}_{'freeze-saes' if freeze_saes else 'no-freeze-saes'}",
     val_dataset=val_data,
     initial_val_loss=initial_val_loss
 )
