@@ -113,7 +113,6 @@ peft_state_dict = f"eval/SAE-Bench/gemma_peft_0-25_rank_{RANK}.pt" if MODEL_TYPE
 
 print("peft_state_dict loaded:", peft_state_dict)
 
-load_dotenv('/home/mattchen/urop_fall_2024/.env', override=True)
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # list of tuple of (sae_id, sae object)
